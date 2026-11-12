@@ -1,3 +1,9 @@
 -- Initial schema source: src/models/*.py; metadata.create_all creates missing tables.
 -- Raw batches and label-independent policy frozen per study; immutable run/review/report IDs.
 -- sigma DOUBLE, permutation counts/seed INTEGER; calculations NumPy Float64.
+-- dataset_revisions: append-only reading versions (version 1 = import baseline),
+--   changes JSON records per-symbol before/after; dataset.current_version points at latest.
+-- run_snapshots: frozen snapshot per run so recomputation and history never read mutable state.
+-- review_invalidations: one row per review that a correction superseded.
+-- dataset_version columns on studies/runs/reviews/reports bind provenance and
+-- block approval when a review predates the current reading version.

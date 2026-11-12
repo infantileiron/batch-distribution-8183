@@ -6,3 +6,6 @@ from .study import DistributionStudy
 from .run import DistributionRun
 from .review import ShiftReview
 from .report import Report
+from .revision import DatasetRevision
+from .run_snapshot import RunSnapshot
+from .invalidation import ReviewInvalidation

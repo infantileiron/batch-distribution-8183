@@ -15,6 +15,19 @@
 7. 09:30 分别解释两个未经多重校正的p，写明独立可交换假设，提交接受或待补充复核版本。
 8. 09:40 负责人批准最新接受版本，下载绑定运行、口径、复核版本与校验和的CSV。
 
+### 复测更正
+
+复测发现色样读数录入有误时，按样本ID更正：
+
+- `POST /datasets/{id}/revisions`，body `{note, changes:[{sample_id,l,a,b}]}`；更正只改指定样本的三维读数，不重排样本、不重命名ID，至少一项读数实际变化才生成新版本。
+- 每次更正新增不可变 `DatasetRevision` 版本（v1 为导入基线），记录每个样本的更正前/后读数、作者、说明与时间；批次对照的 `current_version` 指向最新版本。页面“两批原始读数”页可追溯全部版本及每条更正前后值。
+- 未归档研究自动按原研究快照中的冻结口径重算：研究快照替换为该版本读数，生成新运行并冻结该次运行的 `RunSnapshot`；两种检验继续使用同一 seed 的共享排列与同一缩放/核宽/置换预算，旧运行标记 `superseded`。
+- 基于旧读数的复核新增 `ReviewInvalidation` 记录并显示“已失效”；提审与批准都会校验运行读数版本、研究版本、批次当前版本一致，旧复核不能批准新结果。
+- 已批准归档的研究（存在 Report）不重算、不改快照、不重跑，其CSV按原运行结果导出，保持原样。
+- 更正与批准串行化在批次对照行锁上并重新读取状态：若更正先提交，批准看到新版本后拒绝；若批准先提交，研究已归档，后续更正跳过该研究。
+
+重算运行失败或队列不可用时，研究仍保留新读数快照与冻结口径，可在研究页重新运行；失败原因与旧运行结果均可追溯。
+
 ## 快速启动
 
 ```sh
@@ -47,7 +60,7 @@ docker compose exec backend python -m scripts.seed_demo
 
 ## 实体与技术
 
-六实体 ColorBatchDataset、KernelPolicy、DistributionStudy、DistributionRun、ShiftReview、Report，贯穿表/model/schema/service/route、前端API/store/page。研究冻结原始批次及口径；运行保存原始读数、变换参数、统计、完整排列与分布；每次复核新增不可变版本。归档绑定最新接受复核ID，后续新复核不改变旧CSV。
+六实体 ColorBatchDataset、KernelPolicy、DistributionStudy、DistributionRun、ShiftReview、Report，追加 DatasetRevision、RunSnapshot、ReviewInvalidation 支撑更正追溯；贯穿表/model/schema/service/route、前端API/store/page。研究冻结原始批次及口径；运行保存原始读数、变换参数、统计、完整排列与分布，并冻结本次运行的输入快照；每次复核新增不可变版本。归档绑定最新接受复核ID，后续新复核不改变旧CSV。读数更正生成新版本，未归档研究自动重算并令旧复核失效；已归档研究与其CSV保持原样。
 
 | 部分 | 技术 |
 |---|---|
@@ -66,7 +79,7 @@ docker compose exec backend python -m scripts.seed_demo
 
 ## 边界与清理
 
-最多每批120条、API最多999次随机排列，不进行全枚举或多重校正。读数仅JSON表单导入；新口径需新研究，不覆盖已冻结统计。边际图共享每维合并范围分箱，只是观察视图，多元检验使用全部三维。单worker无生产级分布式租约，初始SQLAlchemy建表不含生产迁移回滚，无多租户隔离。模拟均值/方差/多峰不代表真实颜色质量或工艺变化原因。
+最多每批120条、API最多999次随机排列，不进行全枚举或多重校正。读数仅JSON表单导入与按样本ID更正；新口径需新研究，不覆盖已冻结统计。边际图共享每维合并范围分箱，只是观察视图，多元检验使用全部三维。单worker无生产级分布式租约，初始SQLAlchemy建表不含生产迁移回滚，无多租户隔离。模拟均值/方差/多峰不代表真实颜色质量或工艺变化原因。
 
 ```sh
 docker compose down -v --remove-orphans

@@ -1,4 +1,4 @@
-from sqlalchemy import String,Double,Integer,JSON,ForeignKey,Text
+from sqlalchemy import String,Integer,JSON
 from sqlalchemy.orm import Mapped,mapped_column
 from src.config.database import Base
 class ColorBatchDataset(Base):
@@ -8,4 +8,5 @@ class ColorBatchDataset(Base):
  source:Mapped[str]=mapped_column(String)
  batch_a:Mapped[list]=mapped_column(JSON)
  batch_b:Mapped[list]=mapped_column(JSON)
+ current_version:Mapped[int]=mapped_column(Integer,default=1,server_default='1')
  created_at:Mapped[str]=mapped_column(String)
